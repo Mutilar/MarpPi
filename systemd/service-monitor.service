@@ -1,0 +1,15 @@
+[Unit]
+Description=Robot Service Status Monitor (Tray)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 WORKING_DIR/scripts/service-monitor.py --tray
+Restart=on-failure
+RestartSec=10
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/marp/.Xauthority
+
+[Install]
+WantedBy=graphical-session.target

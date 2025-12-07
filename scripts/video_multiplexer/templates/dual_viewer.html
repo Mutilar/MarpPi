@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Multiplexer - Dual View</title>
+    <style>{{base_css}}</style>
+</head>
+<body>
+    <div class="container-wide">
+        <h1>🎥 Video Multiplexer - Dual View</h1>
+        
+        <div class="nav-links">
+            <a href="/">Single Stream View</a>
+            <a href="/dual">Dual View</a>
+        </div>
+        
+        <div class="dual-view">
+            <div class="stream-panel">
+                <h2>📹 Main Stream</h2>
+                <div class="video-container">
+                    <img id="stream-main" src="/stream/main" alt="Main Stream">
+                </div>
+                <div class="controls controls-compact" id="controls-main">
+                    <button class="btn-sm" onclick="switchSource('main', 'kinect_rgb')" id="btn-main-kinect_rgb">Kinect RGB</button>
+                    <button class="btn-sm" onclick="switchSource('main', 'kinect_ir')" id="btn-main-kinect_ir">Kinect IR</button>
+                    <button class="btn-sm" onclick="switchSource('main', 'kinect_depth')" id="btn-main-kinect_depth">Kinect Depth</button>
+                    <button class="btn-sm" onclick="switchSource('main', 'picam')" id="btn-main-picam">Pi Camera</button>
+                </div>
+                <div class="status-bar">
+                    Source: <span id="source-main">-</span> | 
+                    Resolution: <span id="res-main">-</span> | 
+                    Frames: <span id="frames-main">0</span>
+                </div>
+            </div>
+            
+            <div class="stream-panel">
+                <h2>📹 Secondary Stream</h2>
+                <div class="video-container">
+                    <img id="stream-secondary" src="/stream/secondary" alt="Secondary Stream">
+                </div>
+                <div class="controls controls-compact" id="controls-secondary">
+                    <button class="btn-sm" onclick="switchSource('secondary', 'kinect_rgb')" id="btn-secondary-kinect_rgb">Kinect RGB</button>
+                    <button class="btn-sm" onclick="switchSource('secondary', 'kinect_ir')" id="btn-secondary-kinect_ir">Kinect IR</button>
+                    <button class="btn-sm" onclick="switchSource('secondary', 'kinect_depth')" id="btn-secondary-kinect_depth">Kinect Depth</button>
+                    <button class="btn-sm" onclick="switchSource('secondary', 'picam')" id="btn-secondary-picam">Pi Camera</button>
+                </div>
+                <div class="status-bar">
+                    Source: <span id="source-secondary">-</span> | 
+                    Resolution: <span id="res-secondary">-</span> | 
+                    Frames: <span id="frames-secondary">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function switchSource(streamId, source) {
+            fetch('/switch?source=' + source + '&stream=' + streamId);
+            document.querySelectorAll('#controls-' + streamId + ' button').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + streamId + '-' + source).classList.add('active');
+        }
+        
+        function updateStatus() {
+            fetch('/status')
+                .then(r => r.json())
+                .then(data => {
+                    ['main', 'secondary'].forEach(streamId => {
+                        const streamData = data.streams[streamId] || {};
+                        
+                        document.getElementById('source-' + streamId).textContent = streamData.source || '-';
+                        document.getElementById('res-' + streamId).textContent = streamData.resolution || '-';
+                        document.getElementById('frames-' + streamId).textContent = streamData.frames_captured || 0;
+                        
+                        // Disable Kinect buttons if not available
+                        ['kinect_rgb', 'kinect_ir', 'kinect_depth'].forEach(src => {
+                            let btn = document.getElementById('btn-' + streamId + '-' + src);
+                            if (btn) btn.disabled = !data.kinect_available;
+                        });
+                        
+                        // Update active button
+                        document.querySelectorAll('#controls-' + streamId + ' button').forEach(b => b.classList.remove('active'));
+                        if (streamData.source) {
+                            let btn = document.getElementById('btn-' + streamId + '-' + streamData.source);
+                            if (btn) btn.classList.add('active');
+                        }
+                    });
+                });
+        }
+        
+        setInterval(updateStatus, 2000);
+        updateStatus();
+    </script>
+</body>
+</html>

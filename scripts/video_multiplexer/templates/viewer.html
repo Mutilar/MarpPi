@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Multiplexer - {{stream_id}}</title>
+    <style>{{base_css}}</style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Video Multiplexer</h1>
+        
+        <div class="nav-links">
+            <a href="/">Single Stream View</a>
+            <a href="/dual">Dual View (Both Streams)</a>
+        </div>
+        
+        <div class="stream-selector">
+            <label>Viewing Stream:</label>
+            {{stream_buttons}}
+        </div>
+        
+        <div class="video-container">
+            <img id="stream" src="/stream.mjpg" alt="Video Stream">
+        </div>
+        
+        <h3>Video Source for <span id="current-stream-name">{{stream_id}}</span></h3>
+        <div class="controls">
+            <button onclick="switchSource('kinect_rgb')" id="btn-kinect_rgb">Kinect RGB</button>
+            <button onclick="switchSource('kinect_ir')" id="btn-kinect_ir">Kinect IR</button>
+            <button onclick="switchSource('kinect_depth')" id="btn-kinect_depth">Kinect Depth</button>
+            <button onclick="switchSource('picam')" id="btn-picam">Pi Camera</button>
+        </div>
+        
+        <h3>Quality & Resolution</h3>
+        <div class="controls">
+            <div class="control-group">
+                <label>JPEG Quality:</label>
+                <input type="range" id="quality" min="10" max="100" value="70" onchange="setQuality(this.value)">
+                <span id="quality-val">70</span>
+            </div>
+            <div class="control-group">
+                <label>Kinect Scale:</label>
+                <select id="scale" onchange="setScale(this.value)">
+                    <option value="0.5">320x240 (0.5x)</option>
+                    <option value="0.75">480x360 (0.75x)</option>
+                    <option value="1.0" selected>640x480 (1.0x)</option>
+                    <option value="1.5">960x720 (1.5x)</option>
+                    <option value="2.0">1280x960 (2.0x)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Pi Cam Res:</label>
+                <select id="picam_res" onchange="setPicamRes(this.value)">
+                    <option value="low">640x480 (low)</option>
+                    <option value="medium">1280x720 (medium)</option>
+                    <option value="high" selected>1280x800 (high)</option>
+                    <option value="full">1920x1080 (full)</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="status" id="status">
+            Stream: <span id="stream-id">{{stream_id}}</span> |
+            Source: <span id="current-source">loading...</span> | 
+            Kinect: <span id="kinect-status">-</span> |
+            Resolution: <span id="resolution">-</span> | 
+            Quality: <span id="jpeg-quality">-</span> |
+            Frames: <span id="frames">0</span> |
+            Clients: <span id="clients">0</span>
+        </div>
+    </div>
+    
+    <script>
+        let currentStreamId = '{{stream_id}}';
+        
+        function selectStream(streamId) {
+            window.location.href = '/?stream=' + streamId;
+        }
+        
+        function switchSource(source) {
+            fetch('/switch?source=' + source + '&stream=' + currentStreamId);
+            document.querySelectorAll('.controls button[id^="btn-"]').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + source).classList.add('active');
+        }
+        
+        function setQuality(val) {
+            document.getElementById('quality-val').textContent = val;
+            fetch('/switch?quality=' + val + '&stream=' + currentStreamId);
+        }
+        
+        function setScale(val) {
+            fetch('/switch?scale=' + val + '&stream=' + currentStreamId);
+        }
+        
+        function setPicamRes(val) {
+            fetch('/switch?picam_res=' + val + '&stream=' + currentStreamId);
+        }
+        
+        function updateStatus() {
+            fetch('/status')
+                .then(r => r.json())
+                .then(data => {
+                    const streamData = data.streams[currentStreamId] || {};
+                    
+                    document.getElementById('stream-id').textContent = currentStreamId;
+                    document.getElementById('current-source').textContent = streamData.source || '-';
+                    document.getElementById('resolution').textContent = streamData.resolution || '-';
+                    document.getElementById('jpeg-quality').textContent = streamData.jpeg_quality || '-';
+                    document.getElementById('frames').textContent = streamData.frames_captured || 0;
+                    document.getElementById('clients').textContent = streamData.clients_connected || 0;
+                    
+                    let kinectStatus = document.getElementById('kinect-status');
+                    if (data.kinect_available) {
+                        kinectStatus.textContent = 'OK';
+                        kinectStatus.className = 'status-ok';
+                    } else {
+                        kinectStatus.textContent = 'N/A';
+                        kinectStatus.className = 'status-error';
+                    }
+                    
+                    ['kinect_rgb', 'kinect_ir', 'kinect_depth'].forEach(src => {
+                        let btn = document.getElementById('btn-' + src);
+                        if (btn) btn.disabled = !data.kinect_available;
+                    });
+                    
+                    if (streamData.jpeg_quality) {
+                        document.getElementById('quality').value = streamData.jpeg_quality;
+                        document.getElementById('quality-val').textContent = streamData.jpeg_quality;
+                    }
+                    if (streamData.scale_factor) {
+                        document.getElementById('scale').value = streamData.scale_factor;
+                    }
+                    if (streamData.picam_preset) {
+                        document.getElementById('picam_res').value = streamData.picam_preset;
+                    }
+                    
+                    document.querySelectorAll('.controls button[id^="btn-"]').forEach(b => b.classList.remove('active'));
+                    if (streamData.source) {
+                        let btn = document.getElementById('btn-' + streamData.source);
+                        if (btn) btn.classList.add('active');
+                    }
+                });
+        }
+        
+        setInterval(updateStatus, 2000);
+        updateStatus();
+    </script>
+</body>
+</html>

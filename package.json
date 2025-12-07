@@ -1,0 +1,11 @@
+{
+  "name": "marp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "render:mermaid": "powershell -ExecutionPolicy Bypass -File ./scripts/render-mermaid.ps1 -AllReadmes"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^10.9.0"
+  }
+}

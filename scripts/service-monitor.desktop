@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Robot Service Monitor
+Comment=Monitor robot services and power status
+Exec=/usr/bin/python3 /home/marp/Marp/scripts/service-monitor.py --tray
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=5

@@ -1,0 +1,228 @@
+/**
+ * Video Multiplexer - Base Styles
+ * Shared CSS for all web viewer pages
+ */
+
+/* === Reset & Base === */
+* {
+    box-sizing: border-box;
+}
+
+body { 
+    font-family: Arial, sans-serif; 
+    background: #1a1a2e; 
+    color: #eee;
+    margin: 0;
+    padding: 20px;
+}
+
+/* === Typography === */
+h1 { 
+    color: #00d9ff; 
+    margin-bottom: 10px; 
+}
+
+h2 {
+    margin: 0 0 10px 0;
+    color: #00d9ff;
+    font-size: 18px;
+}
+
+h3 { 
+    margin: 15px 0 10px 0; 
+    color: #00d9ff; 
+    font-size: 14px; 
+}
+
+/* === Layout === */
+.container { 
+    max-width: 1300px; 
+    margin: 0 auto; 
+}
+
+.container-wide {
+    max-width: 1800px;
+    margin: 0 auto;
+}
+
+/* === Navigation === */
+.nav-links {
+    margin-bottom: 15px;
+}
+
+.nav-links a {
+    color: #00d9ff;
+    text-decoration: none;
+    margin-right: 15px;
+}
+
+.nav-links a:hover { 
+    text-decoration: underline; 
+}
+
+/* === Video Display === */
+.video-container {
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.video-container img { 
+    width: 100%; 
+    max-width: 1280px;
+    display: block;
+}
+
+/* === Stream Panels (Dual View) === */
+.dual-view {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 1200px) {
+    .dual-view {
+        grid-template-columns: 1fr;
+    }
+}
+
+.stream-panel {
+    background: #16213e;
+    border-radius: 8px;
+    overflow: hidden;
+    padding: 15px;
+}
+
+.stream-panel .video-container {
+    margin-bottom: 15px;
+}
+
+.stream-panel img {
+    width: 100%;
+    display: block;
+}
+
+/* === Stream Selector === */
+.stream-selector {
+    background: #0f3460;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.stream-selector label {
+    margin-right: 10px;
+}
+
+.stream-selector button.active {
+    background: #e94560;
+}
+
+/* === Buttons === */
+button {
+    padding: 10px 20px;
+    font-size: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #16213e;
+    color: #eee;
+    transition: all 0.2s;
+}
+
+button:hover { 
+    background: #0f3460; 
+}
+
+button.active { 
+    background: #00d9ff; 
+    color: #000; 
+}
+
+button:disabled { 
+    background: #333; 
+    color: #666; 
+    cursor: not-allowed; 
+}
+
+/* Smaller buttons for compact layouts */
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+/* === Controls === */
+.controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.controls-compact {
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.control-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: #16213e;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.control-group label {
+    font-size: 14px;
+    color: #aaa;
+}
+
+/* === Form Elements === */
+select, 
+input[type="range"] {
+    background: #0f3460;
+    color: #eee;
+    border: 1px solid #00d9ff;
+    border-radius: 4px;
+    padding: 6px;
+}
+
+input[type="range"] { 
+    width: 100px; 
+}
+
+/* === Status Display === */
+.status {
+    background: #16213e;
+    padding: 15px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.status span { 
+    color: #00d9ff; 
+}
+
+.status-bar {
+    font-family: monospace;
+    font-size: 12px;
+    color: #aaa;
+}
+
+.status-bar span { 
+    color: #00d9ff; 
+}
+
+/* === State Colors === */
+.status-ok {
+    color: #00ff00 !important;
+}
+
+.status-error {
+    color: #ff6666 !important;
+}

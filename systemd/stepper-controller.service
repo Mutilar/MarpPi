@@ -1,0 +1,19 @@
+[Unit]
+Description=Robot Stepper Controller
+After=network.target multi-user.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/sleep 10
+ExecStart=WORKING_DIR/build/stepper_pi
+WorkingDirectory=WORKING_DIR
+Restart=on-failure
+RestartSec=10
+StartLimitIntervalSec=60
+StartLimitBurst=3
+User=root
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

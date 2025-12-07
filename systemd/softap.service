@@ -1,0 +1,13 @@
+[Unit]
+Description=Robot SoftAP Setup
+After=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+ExecStart=WORKING_DIR/scripts/setup-softap.sh
+RemainAfterExit=yes
+User=root
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,3 @@
+[submodule "Stepper/pi/libfreenect"]
+	path = Stepper/pi/libfreenect
+	url = https://github.com/OpenKinect/libfreenect
