@@ -258,7 +258,7 @@ This project runs on a Raspberry Pi 5 to control a 4-axis robot (2 Drive Stepper
 
 ## System Architecture
 
-![Architecture](../../assets/diagrams/architecture.png)
+![Architecture](assets/diagrams/architecture.png)
 
 > Color key: **Blue**=Client, **Yellow**=Services, **Purple**=Hardware
 
