@@ -8,6 +8,7 @@
 #include "Constants.hpp"
 #include "MotorController.hpp"
 #include "InputManager.hpp"
+#include "LedController.hpp"
 
 std::atomic<bool> running{true};
 
@@ -45,10 +46,17 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    LedController ledController;
+    if (!ledController.initialize()) {
+        std::cerr << "LED controller init failed (continuing without LEDs)" << std::endl;
+    }
+
     InputManager inputManager;
     inputManager.start(joystickPath);
 
     std::cout << "System initialized. Waiting for input..." << std::endl;
+
+    auto nextLedUpdate = std::chrono::steady_clock::now();
 
     auto nextLogTime = std::chrono::steady_clock::now();
 
@@ -75,8 +83,26 @@ int main(int argc, char* argv[]) {
         motorController.setSpeed(MotorController::PAN, commandToSpeed(panCommand));
         motorController.setSpeed(MotorController::TILT, commandToSpeed(tiltCommand));
 
-        // Logging
+        // ── LED update tick ───────────────────────────────────────────
+        //
+        //  TODO: replace this placeholder with real face-expression logic
+        //        once the LED segment map is populated.
+        //
+        //  Ideas for wiring up input → LEDs:
+        //    · Trigger axes  → brightness / colour blend
+        //    · Button presses → expression macros (blink, smile, …)
+        //    · Network JSON   → add an "leds" key with per-segment colours
+        //
         auto now = std::chrono::steady_clock::now();
+        if (now >= nextLedUpdate) {
+            // ledController.fillSegment("left_eye",  0, 0, 255);
+            // ledController.fillSegment("right_eye", 0, 0, 255);
+            // ledController.fillSegment("mouth",     0, 255, 0);
+            // ledController.show();
+            nextLedUpdate = now + std::chrono::milliseconds(Constants::LED_REFRESH_INTERVAL_MS);
+        }
+
+        // Logging
         if (now >= nextLogTime) {
             std::cout << "JOY X=" << xCommandRaw
                       << " Y=" << yCommandRaw
@@ -93,6 +119,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Shutting down..." << std::endl;
     inputManager.stop();
+    ledController.stop();
     motorController.stop();
 
     return 0;

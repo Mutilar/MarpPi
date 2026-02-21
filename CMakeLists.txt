@@ -11,6 +11,7 @@ add_executable(stepper_pi
     src/main.cpp
     src/MotorController.cpp
     src/InputManager.cpp
+    src/LedController.cpp
 )
 
 target_link_libraries(stepper_pi 

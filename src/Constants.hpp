@@ -33,6 +33,13 @@ namespace Constants {
     constexpr int MAX_JOYSTICK_VALUE = 32767;       // Signed 16-bit joystick axis max.
     constexpr char DEFAULT_JOYSTICK_PATH[] = "/dev/input/js0";
 
+    // WS2815 LED Strip (12 V, driven via SPI MOSI → 3.3→5 V level-shift)
+    constexpr char LED_SPI_DEVICE[]      = "/dev/spidev0.0";
+    constexpr uint32_t LED_SPI_SPEED_HZ  = 6'400'000;   // ≈ 800 kHz NRZ encoded as 8× SPI bits
+    constexpr uint16_t LED_PIXEL_COUNT   = 144;          // BTF-LIGHTING WS2815, 3.2 ft strip
+    constexpr uint8_t  LED_DEFAULT_BRIGHTNESS = 128;     // 0-255 global scalar (50 % default)
+    constexpr unsigned LED_REFRESH_INTERVAL_MS = 16;     // ~60 Hz max refresh rate
+
     // Network
     constexpr int UDP_PORT = 5005;
     constexpr int UDP_BUFFER_SIZE = 4096;

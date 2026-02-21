@@ -37,8 +37,7 @@ graph TD
     PDAdapter["JacobsParts USB-C PD\n20 V USB-PD output"]
     Projector["NEBULA Capsule Air\nUSB-C PD (~45 W)"]
     Pi["Raspberry Pi 5 + Storage\n5 V, ~5.4 A"]
-    Kinect["Kinect & USB Peripherals\n5 V, ~2 A"]
-    LEDs["Addressable LEDs & Logic\n5 V, ~3 A"]
+    LEDs["WS2815 Addressable LEDs\n12 V, ~2.6 A"]
 
     Battery --> Breaker --> Switch --> Meter --> FuseBlock
     FuseBlock --> FuseStepper24 --> Stepper24Left
@@ -48,8 +47,8 @@ graph TD
     Buck12 --> Stepper12Tilt
     FuseBlock --> FusePD --> PDAdapter --> Projector
     FuseBlock --> FuseBuck5 --> Buck5 --> Pi
-    Pi --> Kinect
-    Pi --> LEDs
+    Buck12 --> LEDs
+    Pi -.->|Data signal| LEDs
     Pi --> Lasers
     Stepper24Left --> LeftWheel["Left Wheel KH56"]
     Stepper24Right --> RightWheel["Right Wheel KH56"]
@@ -62,7 +61,7 @@ graph TD
     class Stepper24Left,Stepper24Right,Stepper12Pan,Stepper12Tilt driver
     class Buck12,Buck5,PDAdapter converter
     class Pi compute
-    class Projector,Audio,Kinect,LEDs,Lasers peripheral
+    class Projector,Audio,LEDs,Lasers peripheral
     class LeftWheel,RightWheel,HeadPan,HeadTilt motor
 
     classDef battery fill:#69c06f,stroke:#2e8540,color:#0b3d17,stroke-width:2px
@@ -93,7 +92,7 @@ graph TD
 graph TB
     Pi["Raspberry Pi 5\nCore compute & control"]
     Projector["NEBULA Capsule Air\nHDMI sink"]
-    Kinect["Xbox Kinect Sensor\nUSB 3.0"]
+    Camera["Arducam IMX708\nCSI"]
     Controller["Xbox Controller Adapter\nUSB"]
 
     subgraph StepperDrivers24["24 V TB6600 Stepper Drivers"]
@@ -132,13 +131,14 @@ graph TB
     end
 
     Pi -->|HDMI| Projector
-    Pi -->|USB 3.0| Kinect
+    Camera -->|CSI| Pi
     Pi -->|USB| Controller
     Pi -->|Step / Dir / Enable| StepperL
     Pi -->|Step / Dir / Enable| StepperR
     Pi -->|Step / Dir / Enable| StepperPan
     Pi -->|Step / Dir / Enable| StepperTilt
     Pi -->|PWM / Dir| ShutterDriver
+    Pi -->|GPIO Data via level-shift| LEDs["WS2815 LED Strip\n144 px, 12 V"]
     Pi -->|Trigger| UltrasonicArray
     UltrasonicArray -->|Echo timing| Pi
     IRArray -->|Analog distance| Pi
@@ -165,7 +165,7 @@ graph TB
     ShutterDriver -->|Motor power| ShutterMotor
 
     class Pi compute
-    class Projector,Kinect,Controller,UltrasonicArray,IRArray,PanLimit,ShutterLimit peripheral
+    class Projector,Camera,Controller,UltrasonicArray,IRArray,PanLimit,ShutterLimit,LEDs peripheral
     class StepperL,StepperR,StepperPan,StepperTilt,ShutterDriver driver
     class MotorLeft,MotorRight,MotorPan,MotorTilt,ShutterMotor motor
 
@@ -204,7 +204,7 @@ graph TB
     subgraph Perception["Perception Inputs"]
         Ultrasonic["Ultrasonic Pair\nObstacle distance"]
         Lidar["2D LiDAR\nScan-based clearance"]
-        Kinect["Xbox Kinect + IMU\nPose / RGB / Depth"]
+        Arducam["Arducam IMX708\nRGB / autofocus"]
     end
 
     subgraph Expression["Expressive Outputs"]
@@ -212,7 +212,7 @@ graph TB
         Head["Head Presence\nPan / tilt gestures"]
         Projection["Projected Media\nWWT astronomical scenes"]
         Audio["Audio Atmosphere\nTTS / SFX / music"]
-        LEDs["Facial LEDs\nAddressable strip"]
+        LEDs["Facial LEDs\nWS2815 strip (144 px)"]
     end
 
     User -->|2D analog| XLeft
@@ -227,12 +227,11 @@ graph TB
 
     Ultrasonic -->|Stop zone alerts| Mobility
     Lidar -->|Clearance map| Mobility
-    Kinect -->|Gesture & presence cues| LEDs
-    Kinect -->|Audience detection| Audio
+    Arducam -->|Vision cues| LEDs
 
     class User actor
     class XLeft,XRight,XTrig,XFace,DLeft,DRight,DTrig,DMacro input
-    class Ultrasonic,Lidar,Kinect sensor
+    class Ultrasonic,Lidar,Arducam sensor
     class Mobility,Head,Projection,Audio,LEDs output
 
     classDef actor fill:#ffe29c,stroke:#d49f00,color:#7a5d00,stroke-width:1.5px
@@ -283,6 +282,7 @@ graph TD
             Camera["Pi Camera"]
             Drivers["Stepper Drivers (x4)"]
             Motors["Motors (L/R/Pan/Tilt)"]
+            LEDStrip["WS2815 LED Strip (144 px)"]
             LocalJoy["Local Joystick (Optional)"]
         end
     end
@@ -294,6 +294,7 @@ graph TD
 
     %% Internal Interactions
     StepService -->|GPIO| Drivers
+    StepService -->|SPI| LEDStrip
     Drivers --> Motors
     LocalJoy -->|USB| StepService
     Camera -->|CSI| VidService
@@ -305,7 +306,7 @@ graph TD
     
     class Unity client;
     class WifiService,StepService,VidService service;
-    class Camera,Drivers,Motors,LocalJoy hardware;
+    class Camera,Drivers,Motors,LocalJoy,LEDStrip hardware;
 </details>
 
 ## Hardware Pinout (BCM GPIO)
@@ -317,7 +318,50 @@ graph TD
 | **Turret Pan** | 23 | 24 | 25 |
 | **Turret Tilt** | 12 | 16 | 20 |
 
-*   **Activity LED**: GPIO 18
+| Function | Pin | Notes |
+| :--- | :--- | :--- |
+| **Activity LED** | GPIO 18 | Active-high indicator |
+| **WS2815 Data** | SPI0 MOSI (GPIO 10) | Via 3.3→5 V level-shifter |
+| **SPI0 SCLK** | GPIO 11 | Directly by SPI peripheral (active but unused by strip) |
+| **SPI0 CE0** | GPIO 8 | Directly by SPI peripheral (active but unused by strip) |
+
+### WS2815 LED Strip Wiring
+
+| Wire | Strip Pad | Connect To | Notes |
+| :--- | :--- | :--- | :--- |
+| **12 V** | VCC / +12 V | 12 V Buck converter rail | Shared with pan/tilt stepper 12 V supply |
+| **GND** | GND | Common ground bus | |
+| **Data** | DIN | Pi SPI0 MOSI (GPIO 10) via level-shifter | 3.3 V → 5 V (e.g. SN74AHCT125 or BSS138 module) |
+| **Backup Data** | BIN | Leave unconnected or tie to DIN | WS2815 dual-signal redundancy line |
+
+> **SPI rationale**: The Pi's SPI peripheral provides a precise, DMA-backed bit
+> stream at 6.4 MHz — exactly 8× the 800 kHz NRZ timing the WS2815 protocol
+> needs.  Each LED colour bit is expanded into an 8-bit SPI byte (0xF0 for a 1,
+> 0xC0 for a 0).  This avoids the timing jitter issues that bit-banging a GPIO
+> pin would have on a Linux userspace process.
+
+### LED Face Segment Map (TBD)
+
+Once the physical LED placement is finalised, populate the segment table in
+`src/LedController.cpp → kFaceSegments`.  Each segment maps a name to a
+contiguous run of pixel indices:
+
+```cpp
+static const std::vector<LedSegment> kFaceSegments = {
+    { "left_eye",    0, 12 },   // pixels  0–11
+    { "right_eye",  20, 12 },   // pixels 20–31
+    { "mouth",      40, 30 },   // pixels 40–69
+    // …
+};
+```
+
+The `LedController` API then lets you address segments by name:
+
+```cpp
+ledController.fillSegment("left_eye", 0, 0, 255);   // blue
+ledController.fillSegment("mouth",    0, 255, 0);   // green
+ledController.show();
+```
 
 ## 1. Base System Prep
 - Flash Raspberry Pi OS (Bookworm or newer) to a microSD card and boot the Pi.
@@ -331,11 +375,12 @@ graph TD
 ## 2. Install Dependencies
 Install the toolchain, libraries, and utilities:
 ```bash
-sudo apt install -y build-essential cmake liblgpio-dev joystick git nlohmann-json3-dev dnsmasq psmisc
+sudo apt install -y build-essential cmake liblgpio-dev joystick git nlohmann-json3-dev dnsmasq psmisc linux-headers-$(uname -r)
 ```
 - `liblgpio-dev`: GPIO library for high-speed stepping.
 - `nlohmann-json3-dev`: For parsing UDP JSON packets.
 - `dnsmasq`: DHCP server for Wi-Fi Direct.
+- `linux-headers-*`: SPI kernel headers (spidev) for WS2815 LED strip.
 
 ## 3. Build the Controller
 The project uses CMake.
@@ -401,124 +446,40 @@ sudo ./build/stepper_pi [optional_joystick_path]
 }
 ```
 
-## 7. Video Streaming (Multiplexer)
-The video system uses a unified **Video Multiplexer** that provides:
-- Single persistent MJPEG stream on port 5600
-- Hot-swap between video sources without connection drops
-- Built-in web viewer for debugging
-- Configurable resolution and quality
+## 7. Video Streaming (Arducam)
+The video system streams a single MJPEG feed from the **Arducam IMX708** (12 MP, 75° FoV, autofocus) Pi Camera via `rpicam-vid`.
 
-### Available Video Sources
-| Source | Native Resolution | Notes |
-|--------|-------------------|-------|
-| `kinect_rgb` | 640x480 | Scalable via `scale` parameter |
-| `kinect_ir` | 640x480 | Infrared, scalable |
-| `kinect_depth` | 640x480 | Colorized depth map, scalable |
-| `picam` | Configurable | See presets below |
-
-### Resolution Settings
-
-**Kinect Resolution**: Fixed at 640x480 by the sync API. Use the `scale` parameter to resize output:
-| Scale | Output Resolution |
-|-------|-------------------|
-| 0.5 | 320x240 |
-| 0.75 | 480x360 |
-| 1.0 | 640x480 (default) |
-| 1.5 | 960x720 |
-| 2.0 | 1280x960 |
-
-**Pi Camera Presets** (`picam_res` parameter):
+### Resolution Presets
 | Preset | Resolution | FPS |
 |--------|------------|-----|
-| `low` | 640x480 | 30 |
-| `medium` | 1280x720 | 24 |
-| `high` | 1280x800 | 24 (default) |
-| `full` | 1920x1080 | 15 |
-
-**JPEG Quality** (`quality` parameter): 1-100, default 70. Higher = better quality, more bandwidth.
-
-### Endpoints
-| URL | Description |
-|-----|-------------|
-| `http://<ip>:5600/` | Web viewer with controls |
-| `http://<ip>:5600/stream.mjpg` | Raw MJPEG stream |
-| `http://<ip>:5600/status` | JSON status |
-| `http://<ip>:5600/switch?source=X` | Switch source |
-| `http://<ip>:5600/switch?quality=N` | Set JPEG quality (1-100) |
-| `http://<ip>:5600/switch?scale=N` | Set Kinect scale (0.25-2.0) |
-| `http://<ip>:5600/switch?picam_res=X` | Set Pi cam preset |
-| TCP port `5603` | Control server |
+| `low` | 640×480 | 30 |
+| `medium` | 1280×720 | 24 |
+| `high` | 1280×800 | 24 (default) |
+| `full` | 1920×1080 | 15 |
 
 ### Usage
 ```bash
-# Start the multiplexer (via start-video-stream.sh)
+# Start the stream (via systemd or manually)
 ./scripts/start-video-stream.sh
 
-# Or directly with options
-python3 scripts/video_multiplexer.py --source kinect_rgb --quality 80 --scale 1.5 --debug
-
-# Switch sources via TCP
-echo "kinect_ir" | nc localhost 5603
-
-# Change quality via TCP
-echo "quality 50" | nc localhost 5603
-
-# Change Kinect scale via TCP  
-echo "scale 1.5" | nc localhost 5603
-
-# Change Pi camera resolution via TCP
-echo "picam_res full" | nc localhost 5603
-
-# Use the client for viewing/control
-python3 scripts/video_client.py --host 192.168.4.1
+# With options
+./scripts/start-video-stream.sh --resolution high --port 5600
 ```
 
-### Integration with Unity/Clients
-Clients connect to `http://192.168.4.1:5600/stream.mjpg` for MJPEG. To switch sources or settings:
+### Client Connection
+*   **Stream URL**: `http://192.168.4.1:5600/stream.mjpg`
+*   Clients (Unity / Steam Deck) connect to the MJPEG stream directly.
+
 ```csharp
-// HTTP requests - can combine multiple parameters
-UnityWebRequest.Get("http://192.168.4.1:5600/switch?source=kinect_depth");
-UnityWebRequest.Get("http://192.168.4.1:5600/switch?quality=50&scale=1.5");
-UnityWebRequest.Get("http://192.168.4.1:5600/switch?source=picam&picam_res=full");
-
-// Or via TCP socket to port 5603
-socket.Send("kinect_ir\n");
-socket.Send("quality 80\n");
-socket.Send("scale 2.0\n");
+// Unity example
+UnityWebRequest.Get("http://192.168.4.1:5600/stream.mjpg");
 ```
 
-## 8. Kinect Support with libfreenect
-If you plan to steer the robot with a Kinect (RGB/depth, accelerometer, motor/LED control), the repository vendors [`OpenKinect/libfreenect`](https://github.com/OpenKinect/libfreenect) as a submodule.
+> **Note**: The previous multi-source video multiplexer (with Kinect RGB/IR/depth
+> support) has been archived to `archive/kinect/`. See that folder's README if you
+> need to restore it in a future build.
 
-1. **Sync the submodule**
-  ```bash
-  cd ~/Marp
-  git submodule update --init --recursive libfreenect
-  ```
-
-2. **Install Kinect build prerequisites**
-  ```bash
-  sudo apt install -y libusb-1.0-0-dev freeglut3-dev mesa-utils python3 python3-opencv python3-numpy
-  ```
-
-3. **Build libfreenect**
-  ```bash
-  cd ~/Marp/libfreenect
-  mkdir -p build && cd build
-  cmake -L .. -DBUILD_PYTHON3=ON
-  make -j$(nproc)
-  ```
-
-4. **Test Kinect locally** (optional, requires display)
-  ```bash
-  # Run the built-in GL viewer
-  ./bin/freenect-glview
-  
-  # Or use the hiview for high-resolution
-  ./bin/freenect-hiview
-  ```
-
-## 9. Optional: VS Code Setup
+## 8. Optional: VS Code Setup
 To develop and debug directly on the Pi, install the official VS Code build for ARM:
 ```bash
 sudo apt install -y curl gpg
