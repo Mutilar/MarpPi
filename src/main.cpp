@@ -85,20 +85,14 @@ int main(int argc, char* argv[]) {
 
         // ── LED update tick ───────────────────────────────────────────
         //
-        //  TODO: replace this placeholder with real face-expression logic
-        //        once the LED segment map is populated.
-        //
-        //  Ideas for wiring up input → LEDs:
-        //    · Trigger axes  → brightness / colour blend
-        //    · Button presses → expression macros (blink, smile, …)
-        //    · Network JSON   → add an "leds" key with per-segment colours
+        //  TEST MODE: all 144 pixels full white at max brightness.
+        //  Revert to segment-based logic once the test is confirmed.
         //
         auto now = std::chrono::steady_clock::now();
         if (now >= nextLedUpdate) {
-            // ledController.fillSegment("left_eye",  0, 0, 255);
-            // ledController.fillSegment("right_eye", 0, 0, 255);
-            // ledController.fillSegment("mouth",     0, 255, 0);
-            // ledController.show();
+            ledController.setBrightness(255);
+            ledController.fill(255, 255, 255);
+            ledController.show();
             nextLedUpdate = now + std::chrono::milliseconds(Constants::LED_REFRESH_INTERVAL_MS);
         }
 
